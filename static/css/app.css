@@ -1,0 +1,239 @@
+/* ==========================================================================
+   MaxPay design system
+   --------------------------------------------------------------------------
+   Tokens + shared components for the video-calling UI, extracted verbatim from
+   the design reference. Shared by index.html (landing) and room.html
+   (lobby / join / in-call / ended).
+
+   Look: cream paper ground, ink text, terracotta accent (sage second accent),
+   heavily rounded shapes (16-28px cards, 999px pills), Lucide line icons at
+   stroke-width 2.75, soft floating circle decorations, and lots of small
+   motion (see @keyframes) with translateY(-2px) hover lifts on everything
+   interactive.
+   ========================================================================== */
+
+:root {
+  /* ---- Core palette ---- */
+  --color-bg: #f5ead8;          /* cream paper */
+  --color-surface: #ebddc5;     /* raised card */
+  --color-text: #201e1d;        /* ink */
+  --color-accent: #c67139;      /* terracotta */
+  --color-accent-2: #7a8a5e;    /* sage */
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  /* ---- Neutral ramp (warm greys — the dark in-call stage) ---- */
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-400: #c0b6a5;
+  --color-neutral-500: #a19786;
+  --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
+  --color-neutral-800: #474238;
+  --color-neutral-900: #2e2b25;
+
+  /* ---- Accent ramp (terracotta) ---- */
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-400: #f6a06b;
+  --color-accent-500: #d67f48;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+  --color-accent-900: #402310;
+
+  /* ---- Second accent ramp (sage) ---- */
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-200: #e1eecc;
+  --color-accent-2-300: #ccdbb2;
+  --color-accent-2-400: #aebf92;
+  --color-accent-2-500: #8fa073;
+  --color-accent-2-600: #728157;
+  --color-accent-2-700: #56633f;
+  --color-accent-2-800: #3d472b;
+  --color-accent-2-900: #272e1b;
+
+  /* ---- Status (leave button / recording) ---- */
+  --color-danger: oklch(52% 0.18 25);
+  --color-danger-600: oklch(46% 0.19 25);
+  --color-danger-700: oklch(40% 0.18 25);
+
+  /* ---- Type ---- */
+  --font-heading: 'Caprasimo', system-ui, sans-serif;
+  --font-body: 'Figtree', system-ui, sans-serif;
+
+  /* ---- Radius ---- */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+
+  /* ---- Shadow ---- */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+}
+
+/* ==========================================================================
+   Keyframes (reused verbatim from the reference)
+   ========================================================================== */
+@keyframes pulse-rec   { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes fadein      { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes floatA      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+@keyframes floatB      { 0%,100% { transform: translateY(0); } 50% { transform: translateY(13px); } }
+@keyframes ringPulse   { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.65); opacity: 0; } }
+@keyframes eq          { 0%,100% { transform: scaleY(.28); } 50% { transform: scaleY(1); } }
+@keyframes slideInRight{ from { transform: translateX(100%); opacity: .4; } to { transform: translateX(0); opacity: 1; } }
+@keyframes barUp       { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes popIn       { 0% { opacity: 0; transform: scale(.92); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes drawCheck   { to { stroke-dashoffset: 0; } }
+@keyframes msgIn       { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spinDot     { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes spin        { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 400; line-height: 1.05; margin: 0; }
+a { color: inherit; }
+::selection { background: rgba(198, 113, 57, .3); }
+.fadein { animation: fadein .5s ease both; }
+
+/* ==========================================================================
+   Brand + top bar
+   ========================================================================== */
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 999px; background: var(--color-accent);
+  display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); flex: none;
+}
+.brand-mark svg { display: block; }
+.brand-name { font-family: var(--font-heading); font-size: 20px; }
+
+.topbar { display: flex; align-items: center; gap: 17.6px; padding: 26.4px 44px; }
+.topbar-link { color: var(--color-text); text-decoration: none; font-size: 14px; opacity: .7; transition: opacity .16s ease; }
+.topbar-link:hover { opacity: 1; }
+
+.icon-back {
+  display: flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+  border-radius: 999px; border: 1px solid var(--color-divider); background: transparent;
+  cursor: pointer; color: var(--color-text); flex: none;
+  transition: background .16s ease, transform .16s ease; text-decoration: none;
+}
+.icon-back:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); transform: translateX(-2px); }
+
+/* ==========================================================================
+   Buttons (pill, with hover lift)
+   ========================================================================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  cursor: pointer; font-family: var(--font-heading); font-weight: 400; font-size: 15px; line-height: 1;
+  border-radius: 999px; border: none; padding: 16px 30px; text-decoration: none;
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease, opacity .16s ease;
+}
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-accent { color: var(--color-bg); background: var(--color-accent); box-shadow: var(--shadow-md); }
+.btn-accent:hover:not(:disabled) { background: var(--color-accent-600); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.btn-accent:active:not(:disabled) { transform: translateY(0); background: var(--color-accent-700); }
+.btn-outline { color: var(--color-text); background: transparent; border: 1px solid var(--color-divider); padding: 16px 26px; }
+.btn-outline:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text) 7%, transparent); transform: translateY(-2px); }
+.btn-outline:active:not(:disabled) { transform: translateY(0); }
+
+/* Round icon buttons on dark surfaces (preview / control bar) */
+.rbtn {
+  width: 48px; height: 48px; border-radius: 999px; border: none; cursor: pointer; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .12); color: var(--color-neutral-100);
+  transition: background .16s ease, transform .16s ease;
+}
+.rbtn:hover:not(:disabled) { transform: translateY(-2px); }
+.rbtn:disabled { opacity: .45; cursor: not-allowed; }
+.rbtn.sm { width: 42px; height: 42px; }
+.rbtn.off { background: var(--color-danger); color: #fff; }
+.rbtn.on-accent { background: var(--color-accent); color: var(--color-bg); }
+.rbtn svg { display: block; }
+
+/* ==========================================================================
+   Badge / pills / cards / inputs
+   ========================================================================== */
+.badge {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px;
+  background: var(--color-accent-100); color: var(--color-accent-800); font-size: 12px; letter-spacing: .01em;
+}
+.badge .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--color-accent-2-600); animation: spinDot 1.6s ease infinite; }
+
+.card {
+  background: var(--color-surface); border-radius: calc(var(--radius-lg) * 1.15); padding: 28px;
+  box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 17.6px;
+}
+.card h2, .card h3 { margin: 0; }
+.muted { opacity: .7; }
+.divider { height: 1px; background: var(--color-divider); border: 0; margin: 0; }
+
+.avatar { border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-heading); flex: none; }
+
+/* Copy-link row */
+.linkrow {
+  display: flex; align-items: center; gap: 8px; background: var(--color-bg);
+  border: 1px solid var(--color-divider); border-radius: 999px; padding: 6px 6px 6px 16px;
+}
+.linkrow .link-text { flex: 1; min-width: 0; font-size: 13px; font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkrow .copy-inline {
+  display: flex; align-items: center; gap: 6px; cursor: pointer; flex: none; font-size: 12px;
+  font-family: var(--font-heading); color: var(--color-bg); background: var(--color-accent);
+  border: none; border-radius: 999px; padding: 9px 15px; transition: background .16s ease;
+}
+.linkrow .copy-inline.copied { background: var(--color-accent-2-600); }
+
+.field label { display: block; font-size: 12px; margin-bottom: 6px; color: color-mix(in srgb, var(--color-text) 70%, transparent); }
+.input-pill {
+  width: 100%; min-height: 46px; padding: 6px 18px; font: inherit; font-size: 14px; color: var(--color-text);
+  background: var(--color-bg); border: 1px solid var(--color-divider); border-radius: 999px; transition: border-color .16s ease;
+}
+.input-pill:focus { outline: none; border-color: var(--color-accent); }
+.input-pill::placeholder { color: color-mix(in srgb, var(--color-text) 42%, transparent); }
+
+/* Pill <select> with chevron (device pickers) */
+.select-pill { position: relative; flex: 1; min-width: 180px; }
+.select-pill select {
+  appearance: none; -webkit-appearance: none; width: 100%; font: inherit; font-size: 13px; color: var(--color-text);
+  background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: 999px;
+  padding: 11px 38px 11px 16px; cursor: pointer; transition: border-color .16s ease;
+}
+.select-pill select:focus { outline: none; border-color: var(--color-accent); }
+.select-pill .chevron { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--color-text); }
+
+/* Decorative soft circles */
+.blob { position: absolute; border-radius: 999px; z-index: 0; }
+
+/* Equalizer bars (speaking indicator) */
+.eq { display: inline-flex; align-items: flex-end; gap: 2.5px; height: 12px; }
+.eq span { width: 3px; height: 100%; background: currentColor; border-radius: 2px; transform-origin: bottom; animation: eq .9s ease infinite; }
+.eq span:nth-child(2) { animation-delay: .15s; }
+.eq span:nth-child(3) { animation-delay: .3s; }
+.eq span:nth-child(4) { animation-delay: .45s; }
+
+/* ==========================================================================
+   Toasts
+   ========================================================================== */
+.toast-wrap { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 3000; align-items: center; width: 100%; padding: 0 16px; pointer-events: none; }
+.toast {
+  background: var(--color-neutral-900); color: var(--color-neutral-100); border: 1px solid rgba(255, 255, 255, .12);
+  padding: 11px 16px; border-radius: 999px; font-size: 13.5px; box-shadow: var(--shadow-lg);
+  opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; max-width: 460px; text-align: center;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { border-color: color-mix(in srgb, var(--color-danger) 55%, transparent); }
