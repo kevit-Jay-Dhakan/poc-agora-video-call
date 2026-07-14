@@ -1,7 +1,10 @@
-# Agora Video Calling POC (Python / Flask)
+# MaxPay Video KYC (Python / Flask)
 
-A minimal proof of concept: generate a link, share it, anyone who opens it
-joins the same live video call.
+A minimal proof of concept for live video identity verification (Video KYC):
+an agent starts a session and shares the link, the customer opens it, and
+both join the same live video call to complete verification. Camera and
+microphone are both mandatory — verification can't proceed without seeing and
+hearing the customer.
 
 ## How it actually works (important to understand before you extend this)
 
@@ -103,8 +106,20 @@ error instead of a silently-broken token.
 
 ## In-call features
 
-- **Lobby / join preview** — before joining, host and guest both see a live
-  local camera preview (`AgoraRTC.createCameraVideoTrack()`), a **mic-level
+> **Terminology note**: the code/URLs still use `host`/`guest` (`is_host`,
+> `host_token`, `?host=<token>`) since that's the underlying capability model
+> (creator vs. joiner). The UI displays these roles as **Agent** / **Customer**
+> to match the Video KYC framing — that's a display-label change only, not a
+> renamed API.
+
+- **Camera + microphone are mandatory** — unlike a generic call, Video KYC
+  can't proceed without seeing and hearing the customer. If either device is
+  unavailable (denied permission, not found, or in use by another app),
+  `room.html` shows a blocking warning (reusing the existing warning-pill
+  style) and disables Start/Join — see `friendlyMediaError()` and
+  `updateMediaRequirement()`.
+- **Lobby / join preview** — before joining, the agent and customer both see a
+  live local camera preview (`AgoraRTC.createCameraVideoTrack()`), a **mic-level
   meter** driven by the track's `getVolumeLevel()`, mic/camera toggles, and
   **camera + microphone dropdowns** populated from `AgoraRTC.getCameras()` /
   `getMicrophones()` (switching calls `track.setDevice()`). Those same tracks

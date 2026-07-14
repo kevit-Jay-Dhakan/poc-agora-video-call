@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='7' fill='%23c67139'/%3E%3Cg fill='none' stroke='%23f5ead8' stroke-width='2.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m19 9-4 3 4 3V9Z'/%3E%3Crect x='5' y='8' width='9' height='8' rx='1.5'/%3E%3C/g%3E%3C/svg%3E" />
-<title>MaxPay call · {{ room_id }}</title>
+<title>MaxPay Video KYC · {{ room_id }}</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -249,8 +249,8 @@
 
     <!-- HOST card -->
     <div class="card" id="hostCard">
-      <h3 style="font-size:25px;">Ready to start?</h3>
-      <p class="muted" style="margin:0; font-size:13px;">Share this link so others can join once you&rsquo;re live.</p>
+      <h3 style="font-size:25px;">Ready to verify?</h3>
+      <p class="muted" style="margin:0; font-size:13px;">Share this link with your customer to begin the Video KYC session.</p>
       <div class="linkrow">
         <span class="link-text" id="inviteText"></span>
         <button class="copy-inline" id="copyInvite">
@@ -259,19 +259,20 @@
         </button>
       </div>
       <div class="invite-row-warn" id="notShareableWarn">This link opens only on this machine. Set <code>PUBLIC_BASE_URL</code> in <code>.env</code> to your public HTTPS address so others can join.</div>
+      <div class="invite-row-warn" id="mediaWarnHost"></div>
       <hr class="divider" />
       <div class="host-row">
         <div class="host-av-wrap"><div class="ring"></div><div class="av">Y</div></div>
         <div style="font-size:13px;">
-          <div style="font-weight:600;">You&rsquo;re the host</div>
-          <div class="muted" style="font-size:12px;">Waiting for others to join&hellip;</div>
+          <div style="font-weight:600;">You&rsquo;re the verification agent</div>
+          <div class="muted" style="font-size:12px;">Waiting for the customer to join&hellip;</div>
         </div>
       </div>
       <div class="netchip" data-level="checking">
         <span class="net-bars" data-level="checking"><span></span><span></span><span></span></span>
         <span class="txt">Checking connection&hellip;</span>
       </div>
-      <button class="btn btn-accent" id="startBtn" style="font-size:16px; margin-top:6px;">Start call</button>
+      <button class="btn btn-accent" id="startBtn" style="font-size:16px; margin-top:6px;">Start verification</button>
     </div>
 
     <!-- GUEST card -->
@@ -280,17 +281,18 @@
         <div class="avatar" style="width:40px; height:40px; font-size:15px; background:var(--color-accent-2-400);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></svg>
         </div>
-        <div style="font-size:13px; line-height:1.4;">You&rsquo;ve been invited to a <span style="font-weight:600;">MaxPay call</span></div>
+        <div style="font-size:13px; line-height:1.4;">You&rsquo;ve been invited to a <span style="font-weight:600;">MaxPay Video KYC</span> verification</div>
       </div>
       <div class="field">
         <label for="joinName">Your name</label>
         <input class="input-pill" type="text" id="joinName" placeholder="e.g. Alex Rivera" autocomplete="name" />
       </div>
+      <div class="invite-row-warn" id="mediaWarnGuest"></div>
       <div class="netchip" data-level="checking">
         <span class="net-bars" data-level="checking"><span></span><span></span><span></span></span>
         <span class="txt">Checking connection&hellip;</span>
       </div>
-      <button class="btn btn-accent" id="joinBtn" style="font-size:16px;">Join now</button>
+      <button class="btn btn-accent" id="joinBtn" style="font-size:16px;">Join verification</button>
     </div>
   </div>
 </section>
@@ -304,7 +306,7 @@
       <span class="net-bars" id="netBars" data-level="good"><span></span><span></span><span></span></span>
       <span id="netLabel">Connecting…</span>
     </div>
-    <div class="glass">MaxPay call</div>
+    <div class="glass">MaxPay Video KYC</div>
   </div>
 
   <div class="remote-stage" id="remoteStage">
@@ -315,7 +317,7 @@
         <div class="remote-ring delay"></div>
         <div class="remote-av" id="remoteInitial">·</div>
       </div>
-      <div class="remote-waiting" id="remoteWaiting">Waiting for others to join… share the invite link to bring someone in.</div>
+      <div class="remote-waiting" id="remoteWaiting">Waiting for the customer to join… share the invite link to begin verification.</div>
     </div>
     <div class="remote-namepill" id="remoteNamePill">
       <span class="eq"><span></span><span></span><span></span></span>
@@ -345,7 +347,7 @@
       <div class="chat-empty" id="chatEmpty">
         <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
         <div class="et">No messages yet</div>
-        <div class="es" id="chatEmptyText">Say hello — messages are visible to everyone on the call.</div>
+        <div class="es" id="chatEmptyText">Say hello — messages are visible to everyone on this session.</div>
       </div>
     </div>
     <div class="chat-composer">
@@ -398,12 +400,12 @@
           </button>
           <button class="more-item" id="mRecord" role="menuitem" style="display:none;">
             <span id="mRecordIcon"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="6"/></svg></span>
-            <span id="mRecordLabel">Record call</span>
+            <span id="mRecordLabel">Record session</span>
           </button>
         </div>
       </div>
       <div class="ctrl-sep"></div>
-      <button class="leave-btn" id="leaveBtn" title="Leave call" aria-label="Leave call">
+      <button class="leave-btn" id="leaveBtn" title="Leave session" aria-label="Leave session">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(135deg);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       </button>
     </div>
@@ -419,8 +421,8 @@
       <div class="check">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
-      <h2>Call ended</h2>
-      <p class="muted" style="margin:0; font-size:13px;">You were on the call for</p>
+      <h2>Verification ended</h2>
+      <p class="muted" style="margin:0; font-size:13px;">Session duration</p>
       <div class="duration" id="endedDuration">00:00</div>
       <div class="ended-actions">
         <button class="btn btn-outline" id="endedCopy">Copy link to rejoin</button>
@@ -491,12 +493,27 @@ function showToast(message, type = 'info') {
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 200); }, 3800);
 }
 function friendlyMediaError(err) {
-  const n = err && err.name;
-  if (n === 'NotAllowedError' || n === 'PermissionDeniedError') return 'Camera/microphone access was blocked. Allow permissions for this site and reload.';
-  if (n === 'NotFoundError' || n === 'DevicesNotFoundError') return 'No camera or microphone was found on this device.';
-  if (n === 'NotReadableError' || n === 'TrackStartError') return 'Your camera or microphone is already in use by another app.';
-  if (n === 'OverconstrainedError') return 'No camera on this device matches the required settings.';
-  return (err && err.message) || 'Could not access camera/microphone.';
+  // Agora wraps the raw getUserMedia DOMException in its own AgoraRTCError,
+  // exposing a stable `.code` enum -- NOT the original DOMException `.name`
+  // (that's only present if a raw browser error ever surfaces directly).
+  const code = err && err.code;
+  const name = err && err.name;
+  if (code === 'PERMISSION_DENIED' || name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Camera and microphone access is required to complete Video KYC verification. Please allow access for this site and reload the page.';
+  }
+  if (code === 'DEVICE_NOT_FOUND' || name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No camera or microphone was detected on this device. Video KYC verification requires both a working camera and microphone.';
+  }
+  if (code === 'NOT_READABLE' || name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Your camera or microphone is already in use by another app. Please close it and reload to continue verification.';
+  }
+  if (code === 'CONSTRAINT_NOT_SATISFIED' || name === 'OverconstrainedError') {
+    return 'No camera on this device meets the requirements for Video KYC verification.';
+  }
+  if (code === 'NOT_SUPPORTED') {
+    return 'This browser does not support camera/microphone access. Video KYC verification requires a supported browser (e.g. Chrome, Edge, Safari).';
+  }
+  return 'Could not access your camera or microphone, which are both required for Video KYC verification.';
 }
 function formatTime(sec) {
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0'), s = (sec % 60).toString().padStart(2, '0');
@@ -617,6 +634,30 @@ async function initPreview() {
   startMicMeter();
   refreshDevices();
   try { AgoraRTC.onCameraChanged = () => refreshDevices(); AgoraRTC.onMicrophoneChanged = () => refreshDevices(); } catch (_) {}
+  updateMediaRequirement();
+}
+
+// ==================================================== Video KYC: camera + mic are mandatory
+// Identity verification depends on seeing and hearing the customer, so unlike
+// a generic call, joining is blocked (not just a soft toast) until both a
+// camera and a microphone are available.
+function updateMediaRequirement() {
+  const warn = IS_HOST ? $('mediaWarnHost') : $('mediaWarnGuest');
+  const btn = IS_HOST ? $('startBtn') : $('joinBtn');
+  const missing = [];
+  if (!hasCamera) missing.push('camera');
+  if (!hasMic) missing.push('microphone');
+  if (missing.length) {
+    const subject = missing.length === 2 ? 'Your camera and microphone are' : `Your ${missing[0]} is`;
+    warn.textContent = `${subject} not available. Video KYC verification requires both a working camera and microphone — allow access in your browser and reload the page to continue.`;
+    warn.classList.add('show');
+    btn.disabled = true;
+    btn.title = 'Camera and microphone access is required to start Video KYC verification.';
+  } else {
+    warn.classList.remove('show');
+    btn.disabled = false;
+    btn.title = '';
+  }
 }
 
 // ==================================================== copy helpers
@@ -643,23 +684,23 @@ function updateParticipants() {
     <div class="roster-row">
       <div class="avatar" style="background:var(--color-accent-500);">${(myName || 'Y').trim().charAt(0).toUpperCase() || 'Y'}</div>
       <span class="nm">${myName ? escapeHtml(myName) + ' (You)' : 'You'}</span>
-      ${IS_HOST ? '<span class="role-tag">Host</span>' : ''}
+      ${IS_HOST ? '<span class="role-tag">Agent</span>' : ''}
     </div>`];
   remote.forEach((u) => {
     const info = rtmRoster.get(String(u.uid));
-    const name = (info && info.name) || 'Guest';
+    const name = (info && info.name) || 'Customer';
     rows.push(`
     <div class="roster-row">
-      <div class="avatar" style="background:var(--color-accent-2-500);">${escapeHtml(name.trim().charAt(0).toUpperCase() || 'G')}</div>
+      <div class="avatar" style="background:var(--color-accent-2-500);">${escapeHtml(name.trim().charAt(0).toUpperCase() || 'C')}</div>
       <span class="nm">${escapeHtml(name)}</span>
-      ${info && info.host ? '<span class="role-tag">Host</span>' : ''}
+      ${info && info.host ? '<span class="role-tag">Agent</span>' : ''}
     </div>`);
   });
   rosterBody.innerHTML = rows.join('');
 
   if (remote.length) {
     const first = rtmRoster.get(String(remote[0].uid));
-    remoteNameText.textContent = (first && first.name) || 'Guest';
+    remoteNameText.textContent = (first && first.name) || 'Customer';
   }
 }
 function syncRemoteStage() {
@@ -667,8 +708,8 @@ function syncRemoteStage() {
   if (hasRemote && remoteVideoOn) { remoteHolder.style.display = 'none'; remoteNamePill.classList.add('show'); }
   else if (hasRemote) {
     const first = rtmRoster.get(String(client.remoteUsers[0].uid));
-    const name = (first && first.name) || 'Guest';
-    remoteHolder.style.display = 'flex'; remoteInitial.textContent = name.trim().charAt(0).toUpperCase() || 'G'; remoteWaiting.style.display = 'none'; remoteNamePill.classList.add('show');
+    const name = (first && first.name) || 'Customer';
+    remoteHolder.style.display = 'flex'; remoteInitial.textContent = name.trim().charAt(0).toUpperCase() || 'C'; remoteWaiting.style.display = 'none'; remoteNamePill.classList.add('show');
   }
   else { remoteHolder.style.display = 'flex'; remoteInitial.textContent = '·'; remoteWaiting.style.display = 'block'; remoteNamePill.classList.remove('show'); remoteVideoOn = false; }
 }
@@ -691,7 +732,7 @@ async function initRTM() {
       try { text = JSON.parse(event.message).text; } catch (_) { text = String(event.message); }
       if (!text) return;
       const info = rtmRoster.get(event.publisher);
-      appendMessage((info && info.name) || 'Guest', text, false);
+      appendMessage((info && info.name) || 'Customer', text, false);
       if (!chatPanel.classList.contains('open')) chatUnreadDot.classList.add('show');
     });
     rtmClient.addEventListener('presence', (event) => { if (event.channelName === ROOM_ID) refreshRoster(); });
@@ -707,7 +748,7 @@ async function initRTM() {
     await rtmClient.subscribe(ROOM_ID, { withMessage: true, withPresence: true });
     // Presence state values must be strings (RTM StateDetail is string-only).
     await rtmClient.presence.setState(ROOM_ID, 'MESSAGE', {
-      name: myName || (IS_HOST ? 'Host' : 'Guest'),
+      name: myName || (IS_HOST ? 'Agent' : 'Customer'),
       host: IS_HOST ? 'true' : 'false',
     });
     // Don't call getOnlineUsers() here: the presence service can still be
@@ -729,7 +770,7 @@ async function refreshRoster(attempt = 0) {
     const res = await rtmClient.presence.getOnlineUsers(ROOM_ID, 'MESSAGE', { includedUserId: true, includedState: true });
     rtmRoster.clear();
     (res.occupants || []).forEach((o) => {
-      rtmRoster.set(o.userId, { name: (o.states && o.states.name) || 'Guest', host: !!(o.states && o.states.host === 'true') });
+      rtmRoster.set(o.userId, { name: (o.states && o.states.name) || 'Customer', host: !!(o.states && o.states.host === 'true') });
     });
   } catch (err) {
     // Presence service can still be settling right after subscribe -- retry
@@ -743,7 +784,7 @@ async function refreshRoster(attempt = 0) {
 function setChatEnabled(enabled) {
   chatInput.disabled = !enabled;
   chatSendBtn.disabled = !enabled;
-  chatEmptyText.textContent = enabled ? 'Say hello — messages are visible to everyone on the call.' : 'Chat is unavailable right now.';
+  chatEmptyText.textContent = enabled ? 'Say hello — messages are visible to everyone on this session.' : 'Chat is unavailable right now.';
 }
 function appendMessage(name, text, isOwn) {
   chatEmpty.style.display = 'none';
@@ -759,7 +800,7 @@ async function sendChatMessage() {
   chatInput.value = '';
   try {
     await rtmClient.publish(ROOM_ID, JSON.stringify({ text }), { customType: 'chat.message' });
-    appendMessage(myName || (IS_HOST ? 'Host' : 'You'), text, true);
+    appendMessage(myName || (IS_HOST ? 'Agent' : 'You'), text, true);
   } catch (err) { console.error('Send message failed', err); showToast('Message failed to send.', 'error'); }
 }
 chatSendBtn.addEventListener('click', sendChatMessage);
@@ -840,6 +881,12 @@ async function cancelNetTest() {
 // ==================================================== join the call
 async function joinCall() {
   if (joining || joined) return;
+  // Authoritative guard -- the disabled Start/Join button is just a UX
+  // affordance; Enter-to-join on the name field could otherwise bypass it.
+  if (!hasCamera || !hasMic) {
+    showToast('Video KYC verification requires both camera and microphone access. Please allow permissions and reload the page.', 'error');
+    return;
+  }
   joining = true;
   const btn = IS_HOST ? $('startBtn') : $('joinBtn');
   const label = btn.textContent;
@@ -1002,7 +1049,7 @@ async function startRecording() {
   mediaRecorder.onstop = async () => {
     const blob = new Blob(recordedChunks, { type: 'video/webm' });
     captureStream?.getTracks().forEach((t) => t.stop()); captureStream = null;
-    mRecord.classList.remove('recording'); mRecordIcon.innerHTML = ICON_REC; mRecordLabel.textContent = 'Record call'; recPill.style.display = 'none';
+    mRecord.classList.remove('recording'); mRecordIcon.innerHTML = ICON_REC; mRecordLabel.textContent = 'Record session'; recPill.style.display = 'none';
     showToast('Uploading recording…');
     try { const r = await saveToServer(blob, `call-${ROOM_ID}-${stamp()}.webm`); showToast('Recording saved on the server: recordings/' + r.filename); }
     catch (_) { showToast('Recording upload failed — the file was not saved.', 'error'); }

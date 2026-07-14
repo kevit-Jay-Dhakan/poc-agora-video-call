@@ -1,14 +1,15 @@
 """
-Agora Video Calling POC
+MaxPay Video KYC
 ------------------------
-Flask backend that:
-  1. Generates a shareable meeting link (a unique Agora channel name).
+Flask backend for a live video identity-verification (Video KYC) session:
+  1. Generates a shareable verification-session link (a unique Agora channel
+     name) that an agent sends to a customer.
   2. Serves a browser page for that link which joins the Agora video call
      (actual audio/video capture + rendering happens client-side via
      Agora's Web SDK, since there's no browser-media-capture SDK for
      server-side Python -- Python's job here is channel/link management
      and secure token issuance).
-  3. Issues short-lived Agora RTC tokens so the project can run in
+  3. Issues short-lived Agora RTC + RTM tokens so the project can run in
      production ("token authentication") mode, not just testing mode.
 
 Run:
@@ -99,13 +100,13 @@ def is_host_request(room_id):
 
 @app.get("/")
 def index():
-    """Home page: lets someone generate a fresh meeting link."""
+    """Home page: lets an agent start a fresh Video KYC verification session."""
     return render_template("index.html", app_id_configured=bool(APP_ID))
 
 
 @app.post("/api/create-room")
 def create_room():
-    """Generate a unique channel name and return the shareable call link."""
+    """Generate a unique channel name and return the shareable session link."""
     if not APP_ID:
         return jsonify(error="AGORA_APP_ID is not configured on the server."), 500
 
@@ -126,10 +127,11 @@ def create_room():
 
 @app.get("/room/<room_id>")
 def room(room_id):
-    """The page the shared link points to. Joins the video call.
+    """The page the shared link points to. Joins the Video KYC session.
 
-    Host status is validated server-side from the signed token in the URL and
-    passed to the template, so a guest can't unlock host controls by guessing.
+    Agent status is validated server-side from the signed token in the URL
+    and passed to the template, so a customer can't unlock agent-only
+    controls (recording/snapshot) by guessing.
     """
     return render_template(
         "room.html", room_id=room_id, app_id=APP_ID, is_host=is_host_request(room_id)
