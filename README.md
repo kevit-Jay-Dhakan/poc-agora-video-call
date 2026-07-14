@@ -33,7 +33,8 @@ recordings/                     Host snapshots/recordings land here (gitignored)
 server/agora_token/             Agora's official AccessToken2 token builder
   ├─ AccessToken2.py            (copied verbatim from AgoraIO/Tools on GitHub —
   ├─ RtcTokenBuilder2.py         don't hand-roll this, it's a specific
-  └─ Packer.py                   HMAC-SHA256 + versioned binary format)
+  ├─ RtmTokenBuilder2.py         HMAC-SHA256 + versioned binary format)
+  └─ Packer.py
 ```
 
 ## Setup
@@ -41,10 +42,12 @@ server/agora_token/             Agora's official AccessToken2 token builder
 1. **Create an Agora project**: go to https://console.agora.io → Project
    Management → Create. Copy the **App ID**.
    - For this POC, you can leave the project in "Testing Mode" (no App
-     Certificate) — the app will detect this and skip tokens automatically.
+     Certificate) — the app will detect this and skip tokens automatically,
+     for **both** RTC and RTM (see the RTM note below).
    - For anything beyond a local demo, enable the **App Certificate** on the
      project (Console → your project → Config → enable Primary Certificate)
-     and copy it too — this turns on token authentication.
+     and copy it too — this turns on token authentication for RTC *and*
+     unlocks real RTM (chat/presence) login tokens (see the RTM note below).
 
 2. **Configure the app**:
    ```bash
@@ -125,12 +128,37 @@ error instead of a silently-broken token.
 - **Host-only snapshot** — a **Take snapshot** option (also in the ⋯ More menu)
   composites the live video tiles into a `.png` and uploads it to the server's
   `recordings/` folder, instantly and with no permission prompt.
-- **Chat & participants panels** — the participants panel shows the real,
-  live channel roster (from the RTC client). Chat is a UI shell marked "coming
-  soon" — in-call messaging needs Agora RTM, which isn't wired up here.
+- **Chat & participants panels (Agora RTM / Signaling)** — real, live in-call
+  chat and presence, backed by Agora's **RTM 2.x** SDK (`agora-rtm`, loaded via
+  CDN in `room.html`). The browser logs in to RTM with the **same uid** it
+  joined RTC with (as a string), so presence maps 1:1 to video tiles:
+  - Chat messages are sent with `rtm.publish()` and received via the `message`
+    event — real messages only, no canned/sample data. Own messages render
+    right-aligned, others left-aligned, using the existing bubble/pill tokens.
+  - The roster is seeded from RTM **presence** (the `SNAPSHOT` event on
+    subscribe, refreshed on every subsequent `REMOTE_JOIN`/`REMOTE_LEAVE`/
+    `REMOTE_STATE_CHANGED` event) with each person's *real* entered name (or
+    "Host" for the creator) published into presence state on join —
+    replacing the old generic "Participant" label.
+  - If RTM fails to initialize (e.g. a network hiccup), the call itself is
+    unaffected — chat/roster just fall back to a disabled state with a toast,
+    rather than blocking the video call.
 - **Token renewal** — the call page listens for `token-privilege-will-expire`
-  and re-fetches `/api/token` to renew before the token (default 1 hour,
-  `AGORA_TOKEN_TTL_SECONDS`) expires, so long calls aren't dropped.
+  (RTC) and `tokenPrivilegeWillExpire` (RTM) and re-fetches `/api/token` /
+  `/api/rtm-token` to renew both before they expire (default 1 hour,
+  `AGORA_TOKEN_TTL_SECONDS`), so long calls aren't dropped.
+
+### RTM (Signaling) setup note
+
+`GET /api/rtm-token?uid=<uid>` issues the RTM login token, mirroring
+`/api/token`'s pattern (`server/agora_token/RtmTokenBuilder2.py`, copied
+verbatim from AgoraIO/Tools, same source as the RTC builder). Like RTC:
+
+- **No App Certificate** (testing mode) → the endpoint returns `token: null`
+  and the browser logs in to RTM without a token. This works out of the box
+  for local testing, same as the RTC token flow.
+- **App Certificate enabled** → real signed RTM tokens are issued, required
+  before deploying chat/presence beyond a local demo.
 
 ## What's deliberately left out (POC scope)
 
@@ -151,9 +179,6 @@ error instead of a silently-broken token.
   use **Agora Cloud Recording** — a separate server-side API needing your
   Customer ID/Secret and a storage bucket. Note the uploaded files aren't
   access-controlled; add your app's auth before a real deployment.
-- **Real-time chat** — the chat panel is a UI shell; wiring it up needs Agora
-  **RTM** (Signaling), which also unlocks real display names in the participants
-  panel (guests currently show as "Participant").
 - **TURN/firewall fallback** — supported by Agora, not configured here.
 
 ## Pricing (as of writing — verify at agora.io/en/pricing)

@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 
 <script src="https://unpkg.com/agora-rtc-sdk-ng@4.24.6/AgoraRTC_N-production.js"></script>
+<!-- RTM (Signaling) 2.x — must load after AgoraRTC above; the RTM UMD build reuses window.AgoraRTC internally. -->
+<script src="https://unpkg.com/agora-rtm@2.2.4/agora-rtm.js"></script>
 
 <style>
   .screen { display: none; }
@@ -74,6 +76,12 @@
   .net-bars[data-level="ok"] span:nth-child(1),
   .net-bars[data-level="ok"] span:nth-child(2) { background: var(--color-accent-400); }
   .net-bars[data-level="bad"] span:nth-child(1) { background: var(--color-danger); }
+  .net-bars[data-level="checking"] span { background: color-mix(in srgb, var(--color-text) 30%, transparent); animation: pulse-rec 1.3s ease infinite; }
+
+  /* Pre-call network test chip (lobby / join) — same pill shape as the in-call net pill */
+  .netchip { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); transition: background .2s ease, color .2s ease; }
+  .netchip[data-level="good"] { background: var(--color-accent-2-200); color: var(--color-accent-2-800); }
+  .netchip[data-level="fair"], .netchip[data-level="poor"] { background: var(--color-accent-200); color: var(--color-accent-800); }
 
   .remote-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   .remote-stage .video-fill video { object-fit: cover !important; }
@@ -126,17 +134,27 @@
   .panel-head .title { font-family: var(--font-heading); font-size: 16px; margin-right: auto; }
   .panel-close { width: 30px; height: 30px; border-radius: 999px; border: none; background: transparent; color: var(--color-neutral-100); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .16s ease; }
   .panel-close:hover { background: rgba(255,255,255,.12); }
-  .soon-tag { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 999px; background: var(--color-accent); color: var(--color-bg); margin-right: 10px; }
 
   .chat-body { flex: 1; overflow-y: auto; padding: 17.6px; display: flex; flex-direction: column; }
   .chat-empty { margin: auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px; }
   .chat-empty .ic { width: 54px; height: 54px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; color: var(--color-neutral-300); }
   .chat-empty .et { font-family: var(--font-heading); font-size: 16px; }
   .chat-empty .es { font-size: 12.5px; color: var(--color-neutral-300); line-height: 1.5; max-width: 22em; }
+  .msg-row { display: flex; margin-bottom: 12px; animation: msgIn .25s ease both; }
+  .msg-row.own { justify-content: flex-end; }
+  .msg-row .msg { max-width: 78%; padding: 9px 14px; border-radius: var(--radius-md); font-size: 13px; line-height: 1.45; overflow-wrap: break-word; }
+  .msg-row .msg .sender { display: block; font-size: 10.5px; opacity: .65; margin-bottom: 2px; }
+  .msg-row.own .msg { background: var(--color-accent); color: var(--color-bg); border-bottom-right-radius: 4px; }
+  .msg-row:not(.own) .msg { background: rgba(255,255,255,.1); color: var(--color-neutral-100); border-bottom-left-radius: 4px; }
   .chat-composer { display: flex; gap: 8px; padding: 14px; border-top: 1px solid rgba(255,255,255,.08); }
   .chat-composer input { flex: 1; min-height: 40px; padding: 6px 16px; font: inherit; font-size: 13px; color: var(--color-neutral-100); background: rgba(255,255,255,.08); border: none; border-radius: 999px; }
   .chat-composer input:disabled { opacity: .6; }
   .chat-composer .send { width: 40px; height: 40px; border-radius: 999px; border: none; background: rgba(255,255,255,.12); color: var(--color-neutral-400); cursor: not-allowed; display: flex; align-items: center; justify-content: center; flex: none; }
+  .chat-composer .send:not(:disabled) { cursor: pointer; background: var(--color-accent); color: var(--color-bg); }
+  .chat-composer .send:not(:disabled):hover { background: var(--color-accent-600); }
+  #chatBtn { position: relative; }
+  .unread-dot { display: none; position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 999px; background: var(--color-accent); }
+  .unread-dot.show { display: block; }
 
   .roster { padding: 17.6px; display: flex; flex-direction: column; gap: 18px; }
   .roster-row { display: flex; align-items: center; gap: 11px; }
@@ -167,7 +185,13 @@
   }
   @media (max-width: 640px) {
     .self-pip { width: 108px; bottom: 92px; right: 14px !important; }
-    .side-panel, #chatPanel, #participantsPanel { width: 100%; }
+    /* Leave room at the bottom for the control bar -- otherwise the full-height
+       panel sits above it (z-index) and mic/cam/leave become unreachable
+       while chat or participants is open. */
+    .side-panel, #chatPanel, #participantsPanel { width: 100%; bottom: 84px; }
+    /* The self-pip's fixed bottom offset now falls inside that panel's
+       composer area -- hide it while a full-width panel covers the screen. */
+    body.chat-open .self-pip, body.participants-open .self-pip { display: none; }
     .control-bar { bottom: 14px; padding: 0 8px; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
     .control-bar::-webkit-scrollbar { display: none; }
     .control-inner { margin: 0 auto; gap: 6px; padding: 8px; }
@@ -243,6 +267,10 @@
           <div class="muted" style="font-size:12px;">Waiting for others to join&hellip;</div>
         </div>
       </div>
+      <div class="netchip" data-level="checking">
+        <span class="net-bars" data-level="checking"><span></span><span></span><span></span></span>
+        <span class="txt">Checking connection&hellip;</span>
+      </div>
       <button class="btn btn-accent" id="startBtn" style="font-size:16px; margin-top:6px;">Start call</button>
     </div>
 
@@ -257,6 +285,10 @@
       <div class="field">
         <label for="joinName">Your name</label>
         <input class="input-pill" type="text" id="joinName" placeholder="e.g. Alex Rivera" autocomplete="name" />
+      </div>
+      <div class="netchip" data-level="checking">
+        <span class="net-bars" data-level="checking"><span></span><span></span><span></span></span>
+        <span class="txt">Checking connection&hellip;</span>
       </div>
       <button class="btn btn-accent" id="joinBtn" style="font-size:16px;">Join now</button>
     </div>
@@ -301,25 +333,24 @@
     </div>
   </div>
 
-  <!-- Chat (coming-soon shell — messaging needs Agora RTM) -->
+  <!-- Chat (real-time via Agora RTM) -->
   <aside class="side-panel" id="chatPanel">
     <div class="panel-head">
       <span class="title">Chat</span>
-      <span class="soon-tag">Soon</span>
       <button class="panel-close" data-close-panel aria-label="Close chat">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="chat-body">
-      <div class="chat-empty">
+    <div class="chat-body" id="chatBody">
+      <div class="chat-empty" id="chatEmpty">
         <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
-        <div class="et">Chat is coming soon</div>
-        <div class="es">In-call messaging isn&rsquo;t wired up in this build yet — it needs Agora RTM. Until then, share notes another way.</div>
+        <div class="et">No messages yet</div>
+        <div class="es" id="chatEmptyText">Say hello — messages are visible to everyone on the call.</div>
       </div>
     </div>
     <div class="chat-composer">
-      <input type="text" placeholder="Message everyone" disabled aria-label="Chat (coming soon)" />
-      <button class="send" disabled aria-label="Send (coming soon)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+      <input type="text" id="chatInput" placeholder="Message everyone" aria-label="Message everyone" maxlength="500" autocomplete="off" disabled />
+      <button class="send" id="chatSendBtn" aria-label="Send message" disabled><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
     </div>
   </aside>
 
@@ -333,7 +364,6 @@
     </div>
     <div class="roster" id="rosterBody"></div>
     <div class="panel-foot">
-      <p class="panel-note">Display names need Agora RTM (coming soon), so guests show as “Participant”.</p>
       <button class="panel-btn" id="panelCopyInvite">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         <span id="panelCopyLabel">Copy link</span>
@@ -348,6 +378,7 @@
       <button class="rbtn" id="camBtn" title="Turn off camera (V)" aria-label="Toggle camera"></button>
       <button class="rbtn" id="chatBtn" title="Chat" aria-label="Open chat">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span class="unread-dot" id="chatUnreadDot"></span>
       </button>
       <button class="rbtn" id="participantsBtn" title="Participants" aria-label="Open participants">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
@@ -431,6 +462,7 @@ const micBtn = $('micBtn'), camBtn = $('camBtn'), chatBtn = $('chatBtn'), partic
 const moreBtn = $('moreBtn'), moreMenu = $('moreMenu'), mSwitchCam = $('mSwitchCam'), mSnapshot = $('mSnapshot'), mRecord = $('mRecord'), mRecordIcon = $('mRecordIcon'), mRecordLabel = $('mRecordLabel');
 const recPill = $('recPill'), elapsedPill = $('elapsedPill'), netBars = $('netBars'), netLabel = $('netLabel'), netPill = $('netPill');
 const chatPanel = $('chatPanel'), participantsPanel = $('participantsPanel'), rosterBody = $('rosterBody'), participantsTitle = $('participantsTitle');
+const chatBody = $('chatBody'), chatEmpty = $('chatEmpty'), chatEmptyText = $('chatEmptyText'), chatInput = $('chatInput'), chatSendBtn = $('chatSendBtn'), chatUnreadDot = $('chatUnreadDot');
 
 // -------- State --------
 let client, localAudioTrack, localVideoTrack, localUid;
@@ -440,6 +472,14 @@ let elapsedTimer = null, elapsedSeconds = 0, micMeterTimer = null;
 let mediaRecorder, recordedChunks, captureStream;
 let cameras = [], mics = [], currentCameraId = null, currentMicId = null;
 let remoteVideoOn = false, poorNetWarned = false;
+
+// -------- Pre-call network test state --------
+const MIN_QUALITY = 3; // Agora network-quality scale: 1 excellent … 6 down; fair starts at MIN_QUALITY (3-4), poor is 5-6
+let netTestClient = null, netTestCancelled = false, netLevel = null;
+
+// -------- RTM (Signaling) state --------
+let rtmClient = null;
+const rtmRoster = new Map(); // uid (string) -> { name, host }
 
 // ==================================================================== helpers
 function showToast(message, type = 'info') {
@@ -605,20 +645,125 @@ function updateParticipants() {
       <span class="nm">${myName ? escapeHtml(myName) + ' (You)' : 'You'}</span>
       ${IS_HOST ? '<span class="role-tag">Host</span>' : ''}
     </div>`];
-  remote.forEach((u) => rows.push(`
+  remote.forEach((u) => {
+    const info = rtmRoster.get(String(u.uid));
+    const name = (info && info.name) || 'Guest';
+    rows.push(`
     <div class="roster-row">
-      <div class="avatar" style="background:var(--color-accent-2-500);">P</div>
-      <span class="nm">Participant</span>
-      <span style="font-size:11px; opacity:.55;">#${String(u.uid).slice(-4)}</span>
-    </div>`));
+      <div class="avatar" style="background:var(--color-accent-2-500);">${escapeHtml(name.trim().charAt(0).toUpperCase() || 'G')}</div>
+      <span class="nm">${escapeHtml(name)}</span>
+      ${info && info.host ? '<span class="role-tag">Host</span>' : ''}
+    </div>`);
+  });
   rosterBody.innerHTML = rows.join('');
+
+  if (remote.length) {
+    const first = rtmRoster.get(String(remote[0].uid));
+    remoteNameText.textContent = (first && first.name) || 'Guest';
+  }
 }
 function syncRemoteStage() {
   const hasRemote = !!(client && client.remoteUsers.length);
   if (hasRemote && remoteVideoOn) { remoteHolder.style.display = 'none'; remoteNamePill.classList.add('show'); }
-  else if (hasRemote) { remoteHolder.style.display = 'flex'; remoteInitial.textContent = 'P'; remoteWaiting.style.display = 'none'; remoteNamePill.classList.add('show'); }
+  else if (hasRemote) {
+    const first = rtmRoster.get(String(client.remoteUsers[0].uid));
+    const name = (first && first.name) || 'Guest';
+    remoteHolder.style.display = 'flex'; remoteInitial.textContent = name.trim().charAt(0).toUpperCase() || 'G'; remoteWaiting.style.display = 'none'; remoteNamePill.classList.add('show');
+  }
   else { remoteHolder.style.display = 'flex'; remoteInitial.textContent = '·'; remoteWaiting.style.display = 'block'; remoteNamePill.classList.remove('show'); remoteVideoOn = false; }
 }
+
+// ==================================================== RTM (Signaling): presence + chat
+// Same uid as the RTC join (as a string) so presence entries map 1:1 to video tiles.
+async function initRTM() {
+  try {
+    const uidStr = String(localUid);
+    const res = await fetch(`/api/rtm-token?uid=${encodeURIComponent(uidStr)}`);
+    const rtmCfg = await res.json();
+    if (!res.ok) throw new Error(rtmCfg.error || 'Could not fetch RTM token');
+
+    rtmClient = new AgoraRTM.RTM(rtmCfg.app_id, uidStr, { logLevel: 'error' });
+
+    // Register listeners before login/subscribe, same rule as the RTC client.
+    rtmClient.addEventListener('message', (event) => {
+      if (event.channelName !== ROOM_ID) return;
+      let text;
+      try { text = JSON.parse(event.message).text; } catch (_) { text = String(event.message); }
+      if (!text) return;
+      const info = rtmRoster.get(event.publisher);
+      appendMessage((info && info.name) || 'Guest', text, false);
+      if (!chatPanel.classList.contains('open')) chatUnreadDot.classList.add('show');
+    });
+    rtmClient.addEventListener('presence', (event) => { if (event.channelName === ROOM_ID) refreshRoster(); });
+    rtmClient.addEventListener('tokenPrivilegeWillExpire', async () => {
+      try {
+        const r = await fetch(`/api/rtm-token?uid=${encodeURIComponent(uidStr)}`);
+        const c = await r.json();
+        if (c.token) await rtmClient.renewToken(c.token);
+      } catch (err) { console.error('RTM token renewal failed', err); }
+    });
+
+    await rtmClient.login(rtmCfg.token ? { token: rtmCfg.token } : {});
+    await rtmClient.subscribe(ROOM_ID, { withMessage: true, withPresence: true });
+    // Presence state values must be strings (RTM StateDetail is string-only).
+    await rtmClient.presence.setState(ROOM_ID, 'MESSAGE', {
+      name: myName || (IS_HOST ? 'Host' : 'Guest'),
+      host: IS_HOST ? 'true' : 'false',
+    });
+    // Don't call getOnlineUsers() here: the presence service can still be
+    // finishing its internal join right after subscribe() resolves, and an
+    // immediate call races it (Error -13001, "Presence service not
+    // connected"). The initial roster arrives for free via the SDK's own
+    // SNAPSHOT presence event once it's actually ready (handled below).
+    setChatEnabled(true);
+  } catch (err) {
+    console.error('RTM init failed', err);
+    rtmClient = null;
+    setChatEnabled(false);
+    showToast('Chat and participant names are unavailable right now.', 'error');
+  }
+}
+async function refreshRoster(attempt = 0) {
+  if (!rtmClient) return;
+  try {
+    const res = await rtmClient.presence.getOnlineUsers(ROOM_ID, 'MESSAGE', { includedUserId: true, includedState: true });
+    rtmRoster.clear();
+    (res.occupants || []).forEach((o) => {
+      rtmRoster.set(o.userId, { name: (o.states && o.states.name) || 'Guest', host: !!(o.states && o.states.host === 'true') });
+    });
+  } catch (err) {
+    // Presence service can still be settling right after subscribe -- retry
+    // briefly before giving up, instead of logging a spurious error.
+    if (attempt < 2) { setTimeout(() => refreshRoster(attempt + 1), 500); return; }
+    console.warn('Failed to refresh RTM roster', err);
+  }
+  updateParticipants();
+  syncRemoteStage();
+}
+function setChatEnabled(enabled) {
+  chatInput.disabled = !enabled;
+  chatSendBtn.disabled = !enabled;
+  chatEmptyText.textContent = enabled ? 'Say hello — messages are visible to everyone on the call.' : 'Chat is unavailable right now.';
+}
+function appendMessage(name, text, isOwn) {
+  chatEmpty.style.display = 'none';
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (isOwn ? ' own' : '');
+  row.innerHTML = `<div class="msg">${isOwn ? '' : `<span class="sender">${escapeHtml(name)}</span>`}${escapeHtml(text)}</div>`;
+  chatBody.appendChild(row);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text || !rtmClient) return;
+  chatInput.value = '';
+  try {
+    await rtmClient.publish(ROOM_ID, JSON.stringify({ text }), { customType: 'chat.message' });
+    appendMessage(myName || (IS_HOST ? 'Host' : 'You'), text, true);
+  } catch (err) { console.error('Send message failed', err); showToast('Message failed to send.', 'error'); }
+}
+chatSendBtn.addEventListener('click', sendChatMessage);
+chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
 
 // ==================================================== network pill
 function updateNet(q) {
@@ -633,6 +778,65 @@ function updateNet(q) {
   netPill.title = 'Network quality: ' + label;
 }
 
+// ==================================================== pre-call network test
+// Agora's Web SDK has no last-mile probe API (native-only) -- the web
+// equivalent is to briefly join a throwaway channel and sample the same
+// 'network-quality' metric used by the in-call pill, without publishing.
+function setNetChip(level, text) {
+  document.querySelectorAll('.netchip').forEach((chip) => {
+    chip.setAttribute('data-level', level || 'checking');
+    const bars = chip.querySelector('.net-bars');
+    if (bars) bars.setAttribute('data-level', level === 'good' ? 'good' : level === 'fair' ? 'ok' : level === 'poor' ? 'bad' : 'checking');
+    const txt = chip.querySelector('.txt');
+    if (txt) txt.textContent = text;
+  });
+}
+async function runNetTest() {
+  netTestCancelled = false;
+  setNetChip('', 'Checking connection…');
+  let localClient = null;
+  try {
+    const channel = `precheck-${ROOM_ID}-${Math.random().toString(36).slice(2, 8)}`;
+    const res = await fetch(`/api/token?channel=${encodeURIComponent(channel)}`);
+    const cfg = await res.json();
+    if (netTestCancelled || !res.ok) return;
+
+    localClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    netTestClient = localClient;
+    const samples = [];
+    localClient.on('network-quality', (q) => {
+      const worst = Math.max(q.uplinkNetworkQuality || 0, q.downlinkNetworkQuality || 0);
+      if (worst > 0) samples.push(worst);
+    });
+
+    await localClient.join(cfg.app_id, channel, cfg.token || null, cfg.uid || null);
+    if (netTestCancelled) { await localClient.leave().catch(() => {}); return; }
+
+    await new Promise((r) => setTimeout(r, 6000));
+    if (netTestCancelled) { await localClient.leave().catch(() => {}); return; }
+
+    await localClient.leave();
+    if (netTestClient === localClient) netTestClient = null;
+    if (netTestCancelled) return;
+
+    if (!samples.length) { netLevel = 'good'; setNetChip('good', 'Excellent'); return; }
+    samples.sort((a, b) => a - b);
+    const median = samples[Math.floor(samples.length / 2)];
+    if (median <= 2) { netLevel = 'good'; setNetChip('good', 'Excellent'); }
+    else if (median < MIN_QUALITY + 2) { netLevel = 'fair'; setNetChip('fair', 'Fair — video may soften'); }
+    else { netLevel = 'poor'; setNetChip('poor', 'Poor — video may be choppy'); }
+  } catch (err) {
+    if (!netTestCancelled) { console.warn('Network test failed', err); setNetChip('', 'Connection check unavailable'); }
+    if (localClient) { try { await localClient.leave(); } catch (_) {} if (netTestClient === localClient) netTestClient = null; }
+  }
+}
+async function cancelNetTest() {
+  netTestCancelled = true;
+  const c = netTestClient;
+  netTestClient = null;
+  if (c) { try { await c.leave(); } catch (_) {} }
+}
+
 // ==================================================== join the call
 async function joinCall() {
   if (joining || joined) return;
@@ -642,6 +846,11 @@ async function joinCall() {
   btn.disabled = true; btn.textContent = 'Connecting…';
   try {
     if (!IS_HOST) myName = $('joinName').value.trim();
+
+    // Release the pre-call test's throwaway channel before the real join —
+    // never let it contend with the real client for the same media devices.
+    await cancelNetTest();
+    if (netLevel === 'poor') showToast('Your connection looks poor — video may be choppy, but you can still join.', 'error');
 
     const res = await fetch(`/api/token?channel=${encodeURIComponent(ROOM_ID)}`);
     const cfg = await res.json();
@@ -670,6 +879,10 @@ async function joinCall() {
       try { const r = await fetch(`/api/token?channel=${encodeURIComponent(ROOM_ID)}&uid=${localUid}`); const c = await r.json(); if (c.token) await client.renewToken(c.token); }
       catch (err) { console.error('Token renewal failed', err); showToast('Reconnecting session token failed — you may be disconnected shortly.', 'error'); }
     });
+
+    // RTM login with the same uid as the RTC join, so presence maps 1:1 to
+    // video tiles. Real chat/participant-names degrade gracefully on failure.
+    await initRTM();
 
     const toPublish = [localAudioTrack, localVideoTrack].filter(Boolean);
     if (toPublish.length) await client.publish(toPublish);
@@ -703,6 +916,7 @@ function setPanel(which) {
   const isOpen = opening.classList.toggle('open');
   (which === 'chat' ? chatBtn : participantsBtn).classList.toggle('on-accent', isOpen);
   if (isOpen) document.body.classList.add(which === 'chat' ? 'chat-open' : 'participants-open');
+  if (which === 'chat' && isOpen) chatUnreadDot.classList.remove('show');
 }
 chatBtn.addEventListener('click', () => setPanel('chat'));
 participantsBtn.addEventListener('click', () => setPanel('participants'));
@@ -737,6 +951,10 @@ async function leaveCall() {
   stopMicMeter();
   localAudioTrack?.close(); localVideoTrack?.close();
   try { await client?.leave(); } catch (_) {}
+  if (rtmClient) {
+    try { await rtmClient.unsubscribe(ROOM_ID); await rtmClient.logout(); } catch (_) {}
+    rtmClient = null;
+  }
   $('endedDuration').textContent = formatTime(elapsedSeconds);
   showScreen('ended');
 }
@@ -802,7 +1020,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'm' || e.key === 'M') toggleMic();
   if (e.key === 'v' || e.key === 'V') toggleCam();
 });
-window.addEventListener('beforeunload', () => { captureStream?.getTracks().forEach((t) => t.stop()); localAudioTrack?.close(); localVideoTrack?.close(); client?.leave(); });
+window.addEventListener('beforeunload', () => { captureStream?.getTracks().forEach((t) => t.stop()); localAudioTrack?.close(); localVideoTrack?.close(); client?.leave(); netTestClient?.leave(); rtmClient?.unsubscribe(ROOM_ID); rtmClient?.logout(); });
 
 // ==================================================== bootstrap
 function init() {
@@ -818,7 +1036,7 @@ function init() {
     $('joinName').addEventListener('input', (e) => { previewInitial.textContent = (e.target.value || 'A').trim().charAt(0).toUpperCase() || 'A'; });
   }
   showScreen('precall');
-  initPreview();
+  initPreview().then(() => runNetTest());
 }
 init();
 </script>

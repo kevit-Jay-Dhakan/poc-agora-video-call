@@ -22,14 +22,14 @@ import os
 import secrets
 import time
 import uuid
-from pathlib import Path
-
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
+from pathlib import Path
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
-from server.agora_token.RtcTokenBuilder2 import RtcTokenBuilder, Role_Publisher
+from server.agora_token.RtcTokenBuilder2 import Role_Publisher, RtcTokenBuilder
+from server.agora_token.RtmTokenBuilder2 import RtmTokenBuilder
 
 # override=True so edits to .env win over any stale value inherited from a
 # parent process (e.g. Flask's auto-reloader keeps the original environment).
@@ -157,7 +157,7 @@ def get_token():
     if uid is None:
         # 32-bit unsigned int range required by Agora; 0 means "let the
         # SDK auto-assign," so we pick a random non-zero id per user.
-        uid = secrets.randbelow(2**31 - 1) + 1
+        uid = secrets.randbelow(2 ** 31 - 1) + 1
 
     if not APP_CERTIFICATE:
         # The Agora project is in "testing mode" (no App Certificate
@@ -188,6 +188,43 @@ def get_token():
         privilege_expire=TOKEN_TTL_SECONDS,
     )
     return jsonify(app_id=APP_ID, channel=channel_name, uid=uid, token=token)
+
+
+@app.get("/api/rtm-token")
+def rtm_token():
+    """
+    Issue an Agora RTM (Signaling) login token for a given user id.
+
+    Called by the browser right before it logs in to RTM -- with the *same*
+    uid string used to join the RTC channel, so presence entries map 1:1 to
+    video tiles (see the RTC + RTM coordination note in RtmTokenBuilder2).
+
+    Query params:
+      uid (required): the RTM user id -- pass the RTC uid as a string.
+    """
+    uid = request.args.get("uid", "").strip()
+    if not uid:
+        return jsonify(error="uid is required"), 400
+
+    if not APP_ID:
+        return jsonify(error="AGORA_APP_ID is not configured on the server."), 500
+
+    if not APP_CERTIFICATE:
+        # Testing mode (no App Certificate) -- RTM logs in with a null token.
+        return jsonify(app_id=APP_ID, uid=uid, token=None)
+
+    if len(APP_ID) != 32 or len(APP_CERTIFICATE) != 32:
+        return jsonify(
+            error=(
+                "AGORA_APP_ID or AGORA_APP_CERTIFICATE looks malformed "
+                "(expected 32 characters each, as copied from the Agora "
+                "Console). Token generation fails silently on bad input, "
+                "so check your .env values."
+            )
+        ), 500
+
+    token = RtmTokenBuilder.build_token(APP_ID, APP_CERTIFICATE, uid, TOKEN_TTL_SECONDS)
+    return jsonify(app_id=APP_ID, uid=uid, token=token)
 
 
 @app.post("/api/recordings")
